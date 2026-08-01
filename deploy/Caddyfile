@@ -1,0 +1,8 @@
+# Caddy reverse proxy with automatic HTTPS for FeatureMe.
+# Install Caddy, put this at /etc/caddy/Caddyfile, then: systemctl reload caddy
+# DNS: point featureme.io (A record) at this server first.
+
+featureme.io, www.featureme.io {
+    encode gzip
+    reverse_proxy 127.0.0.1:3000
+}

@@ -3,6 +3,14 @@
 The app is fully built. These are the steps **only you can do**, because they require logging into
 your own accounts or entering credentials — which I can't do on your behalf. Each is quick.
 
+> **All API keys go in one place:** God account → **Integrations** tab (`/admin/integrations`).
+> ZapMail, Stripe, SMTP, and the syndication OAuth apps each have a slot with a **Test** button.
+> The backend is already wired — saving a key activates that feature immediately.
+
+> **Deploy on the server:** `git clone`, then `bash deploy/deploy.sh` (installs, migrates, seeds,
+> builds, starts pm2). Put `deploy/Caddyfile` in front for automatic HTTPS. You run it — I can't
+> authenticate the SSH session for you.
+
 ## 0. Security first
 - [ ] **Rotate the Vultr root password.** It was pasted into chat, so treat it as exposed.
       On the server: `passwd`. Better: create a non-root sudo user + disable root SSH login.

@@ -35,6 +35,7 @@ export default function Sidebar({
         {link("/profile/edit", "My Profile")}
         {link("/articles", "News Releases")}
         {link("/connections", "Connections")}
+        {link("/billing", "Billing")}
         {slug && (
           <a
             href={`/${slug}`}
@@ -50,6 +51,7 @@ export default function Sidebar({
             {link("/admin", "Overview")}
             {link("/admin/members", "Members")}
             {link("/admin/coupons", "Coupons")}
+            {link("/admin/integrations", "Integrations")}
           </div>
         )}
       </nav>

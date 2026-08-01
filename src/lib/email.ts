@@ -1,58 +1,53 @@
 import "server-only";
+import nodemailer from "nodemailer";
+import { getIntegrationConfig } from "./integrations";
+import { nextMailbox } from "./zapmail";
 import { env } from "./env";
 
 export type Mail = { to: string; subject: string; html: string; text?: string };
 
-// Pluggable email sender. Defaults to "console" so the app runs with zero setup;
-// swap EMAIL_PROVIDER to "smtp" or "zeptomail" (ZeptoMail / "Zapmail") once keys exist.
-export async function sendEmail(mail: Mail): Promise<{ ok: boolean; info?: string }> {
-  const provider = env.EMAIL_PROVIDER;
-
-  if (provider === "zeptomail" && env.ZEPTOMAIL_TOKEN) {
-    try {
-      const res = await fetch("https://api.zeptomail.com/v1.1/email", {
-        method: "POST",
-        headers: {
-          Authorization: env.ZEPTOMAIL_TOKEN, // e.g. "Zoho-enczapikey xxxx"
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: { address: extractAddress(env.EMAIL_FROM) },
-          to: [{ email_address: { address: mail.to } }],
-          subject: mail.subject,
-          htmlbody: mail.html,
-        }),
-      });
-      return { ok: res.ok, info: `zeptomail ${res.status}` };
-    } catch (e) {
-      return { ok: false, info: String(e) };
-    }
+// Build a transport for the first configured provider:
+//   1) ZapMail — rotate across API-provisioned mailboxes (best deliverability)
+//   2) generic SMTP integration
+//   3) console (logs, so nothing is lost before keys are dropped in)
+async function getTransport(): Promise<{ from: string; transport: nodemailer.Transporter } | null> {
+  // ZapMail rotation
+  const mb = await nextMailbox().catch(() => null);
+  if (mb) {
+    return {
+      from: mb.smtpUser,
+      transport: nodemailer.createTransport({
+        host: mb.smtpHost, port: mb.smtpPort, secure: mb.smtpPort === 465,
+        auth: { user: mb.smtpUser, pass: mb.smtpPass },
+      }),
+    };
   }
 
-  if (provider === "smtp" && env.SMTP_HOST) {
-    // Lazy import so nodemailer is only needed when SMTP is actually configured.
-    try {
-      // Non-static specifier so the bundler doesn't try to resolve this optional dep.
-      const mod = "nodemailer";
-      const nodemailer = (await import(/* webpackIgnore: true */ mod)).default;
-      const transport = nodemailer.createTransport({
-        host: env.SMTP_HOST,
-        port: Number(env.SMTP_PORT),
-        auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined,
-      });
-      await transport.sendMail({ from: env.EMAIL_FROM, ...mail });
-      return { ok: true, info: "smtp sent" };
-    } catch (e) {
-      return { ok: false, info: String(e) };
-    }
+  // Generic SMTP integration
+  const c = await getIntegrationConfig("smtp");
+  if (c.smtpHost && c.smtpUser && c.smtpPass) {
+    const port = parseInt(c.smtpPort || "587", 10);
+    return {
+      from: c.fromEmail || c.smtpUser,
+      transport: nodemailer.createTransport({
+        host: c.smtpHost, port, secure: port === 465,
+        auth: { user: c.smtpUser, pass: c.smtpPass },
+      }),
+    };
   }
-
-  // Fallback: log to server console so nothing is silently lost in dev.
-  console.log(`[email:console] to=${mail.to} subject="${mail.subject}"`);
-  return { ok: true, info: "console" };
+  return null;
 }
 
-function extractAddress(from: string) {
-  const m = from.match(/<([^>]+)>/);
-  return m ? m[1] : from;
+export async function sendEmail(mail: Mail): Promise<{ ok: boolean; info?: string }> {
+  const t = await getTransport();
+  if (!t) {
+    console.log(`[email:console] to=${mail.to} subject="${mail.subject}" (no provider configured)`);
+    return { ok: true, info: "console" };
+  }
+  try {
+    const info = await t.transport.sendMail({ from: env.EMAIL_FROM || t.from, ...mail });
+    return { ok: true, info: info?.messageId || "sent" };
+  } catch (e) {
+    return { ok: false, info: e instanceof Error ? e.message : "send failed" };
+  }
 }

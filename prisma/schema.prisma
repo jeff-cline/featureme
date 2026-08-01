@@ -178,6 +178,19 @@ model Connection {
   @@unique([userId, targetKey])
 }
 
+// Platform-level integration credentials (God account manages these).
+// Mirrors the CORE platform's Integration store so keys drop straight in.
+model Integration {
+  key          String    @id // zapmail | stripe | smtp | medium | blogger | linkedin | tumblr | devto | hashnode
+  label        String    @default("")
+  config       String    @default("{}") // JSON of keys/fields
+  connected    Boolean   @default(false)
+  status       String    @default("unconfigured") // unconfigured | saved | verified | failed
+  lastTestedAt DateTime?
+  lastError    String    @default("")
+  updatedAt    DateTime  @updatedAt
+}
+
 // Click / citation tracking via /r/{id} redirects and profile views
 model ClickEvent {
   id        String   @id @default(cuid())
