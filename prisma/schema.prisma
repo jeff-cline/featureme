@@ -1,0 +1,192 @@
+// FeatureMe — personal-branding / AEO citation SaaS
+// SQLite for zero-infra hosting; migratable to Postgres by swapping `provider`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  passwordHash       String
+  name               String?
+  role               Role     @default(MEMBER)
+  mustChangePassword Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  profile       Profile?
+  subscription  Subscription?
+  connections   Connection[]
+}
+
+// The public, SEO/AEO-optimized microsite at /{slug}
+model Profile {
+  id             String  @id @default(cuid())
+  userId         String  @unique
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  slug           String  @unique            // e.g. "jeff-client" -> featureme.io/jeff-client
+  displayName    String
+  headline       String?                    // short tagline under the name
+  jobTitle       String?
+  company        String?
+  location       String?
+
+  bioHtml        String  @default("")        // WYSIWYG short bio
+  aboutHtml      String  @default("")        // WYSIWYG long "about"
+  profileImageUrl String?
+  youtubeUrl     String?
+
+  // SEO / AEO
+  seoTitle       String?
+  seoDescription String?
+  keywords       String  @default("")        // comma-separated; also drives homepage keyword cloud
+
+  published      Boolean @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  faqs        FaqItem[]
+  pressLinks  PressLink[]
+  articles    Article[]
+  clicks      ClickEvent[]
+}
+
+// Member-authored Q&A -> rendered as FAQPage JSON-LD for answer engines
+model FaqItem {
+  id        String  @id @default(cuid())
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  question  String
+  answer    String
+  order     Int     @default(0)
+}
+
+// External press / prior citations the member wants surfaced
+model PressLink {
+  id        String  @id @default(cuid())
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title     String
+  url       String
+  publisher String?
+  order     Int     @default(0)
+}
+
+// Pricing tiers
+model Plan {
+  id                   String  @id @default(cuid())
+  key                  String  @unique   // basic | mid | advanced
+  name                 String
+  priceCents           Int
+  articlesPerMonth     Int
+  postsPerMonth        Int
+  engagementsPerMonth  Int
+  stripePriceId        String?
+  subscriptions        Subscription[]
+}
+
+model Coupon {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  percentOff     Int?                       // e.g. 25 for 25% off
+  amountOffCents Int?
+  active         Boolean  @default(true)
+  maxRedemptions Int?
+  timesRedeemed  Int      @default(0)
+  expiresAt      DateTime?
+  createdAt      DateTime @default(now())
+  subscriptions  Subscription[]
+}
+
+model Subscription {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId           String
+  plan             Plan      @relation(fields: [planId], references: [id])
+  couponId         String?
+  coupon           Coupon?   @relation(fields: [couponId], references: [id])
+  status           String    @default("trialing") // trialing | active | past_due | canceled
+  currentPeriodEnd DateTime?
+  stripeSubId      String?
+  createdAt        DateTime  @default(now())
+}
+
+// A syndicatable "news release" / article
+model Article {
+  id           String   @id @default(cuid())
+  profileId    String
+  profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title        String
+  bodyHtml     String   @default("")
+  canonicalUrl String?                     // the original source being cited back to
+  status       String   @default("draft")  // draft | queued | published
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  syndications Syndication[]
+}
+
+// Where a given article was pushed (one row per target)
+model Syndication {
+  id        String   @id @default(cuid())
+  articleId String
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  targetKey String                          // matches SyndicationTarget.key
+  status    String   @default("queued")     // queued | posted | failed | skipped
+  remoteUrl String?
+  error     String?
+  postedAt  DateTime?
+  createdAt DateTime @default(now())
+}
+
+// Catalog of outbound platforms
+model SyndicationTarget {
+  id      String  @id @default(cuid())
+  key     String  @unique   // newsroom | medium | devto | blogger | ...
+  name    String
+  kind    String            // rss | oauth | apikey | manual
+  enabled Boolean @default(true)
+  notes   String?
+}
+
+// A member's authorized connection to an outbound platform (connect-once)
+model Connection {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetKey   String
+  status      String   @default("disconnected") // connected | disconnected | error
+  accessToken String?                            // stored server-side only
+  refreshToken String?
+  meta        String?                            // JSON blob
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, targetKey])
+}
+
+// Click / citation tracking via /r/{id} redirects and profile views
+model ClickEvent {
+  id        String   @id @default(cuid())
+  profileId String?
+  profile   Profile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  kind      String   @default("view")  // view | outbound | citation
+  path      String?
+  targetUrl String?
+  ref       String?
+  ua        String?
+  createdAt DateTime @default(now())
+}

@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FeatureMe
 
-## Getting Started
+A personal-branding / **AEO (Answer Engine Optimization)** SaaS. Members get a public,
+schema-rich profile page at `featureme.io/<name>`, publish "news releases" once, and syndicate
+them across trusted platforms to earn **citations back to the source** — the signal answer engines
+(ChatGPT, Perplexity, Google AI Overviews) reward.
 
-First, run the development server:
+## What's built
+
+- **Public profile microsites** `/<slug>` — `Person` + `FAQPage` JSON-LD, OG tags, canonical URLs,
+  profile image, YouTube embed, press links, FAQ, latest news.
+- **Homepage keyword cloud** — every published member is internally linked by name + keywords
+  (the internal-link authority engine).
+- **Member app** (left-nav): Dashboard · My Profile (WYSIWYG bio/about) · News Releases · Connections.
+- **News release composer** — title + WYSIWYG body (images/links) + canonical source URL →
+  one submit fans out to every connected platform.
+- **Syndication engine** — pluggable adapters (`newsroom` always-on RSS, `dev.to`, `Hashnode`,
+  OAuth placeholders for Medium/Blogger/Tumblr/LinkedIn). Connect-once model.
+- **God/admin account** — members management, coupon engine, plan tiers ($99 / $299 / $999).
+- **SEO plumbing** — dynamic `sitemap.xml`, `robots.txt`, newsroom `feed.xml`.
+- **Click tracking** — `/r/<id>` outbound redirects + profile-view logging.
+- **Email module** — console (default) / SMTP / ZeptoMail ("Zapmail") behind env vars.
+- **Auth** — email+password (bcrypt), signed session cookie, forced password change on first login.
+
+## Stack
+
+Next.js 16 (App Router) · TypeScript · Tailwind · Prisma + SQLite · Tiptap WYSIWYG.
+
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run setup     # prisma db push + seed (creates God account + plans + targets)
+npm run dev       # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+God account (seeded): `jeffcline@me.com` / `TEMP!234` → forced reset on first login.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy / go-live
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+See [`docs/LAUNCH-CHECKLIST.md`](docs/LAUNCH-CHECKLIST.md) for the steps only the owner can do
+(server deploy, DNS, Stripe keys, platform OAuth apps).
 
-## Learn More
+## Strategy
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See [`docs/SYNDICATION-STRATEGY.md`](docs/SYNDICATION-STRATEGY.md) for the free-citation playbook —
+which platforms, how others do it, and the best-practice roadmap.
