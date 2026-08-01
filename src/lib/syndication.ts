@@ -87,12 +87,32 @@ function oauthPlaceholder(key: string): Adapter {
   };
 }
 
+// Blogger: real Google OAuth adapter. Uses the member's stored token + blogId;
+// refreshes the access token on 401 via the refresh token.
+const blogger: Adapter = {
+  key: "blogger",
+  async push(a, meta) {
+    if (!meta?.accessToken || !meta?.blogId)
+      return { status: "skipped", error: "Blogger not connected" };
+    const { postToBlogger, refreshAccessToken } = await import("./oauth/blogger");
+    const body = a.canonicalUrl
+      ? `${a.bodyHtml}<p><em>Originally published at <a href="${a.canonicalUrl}" rel="canonical">${a.canonicalUrl}</a>.</em></p>`
+      : a.bodyHtml;
+    let r = await postToBlogger(meta.accessToken, meta.blogId, a.title, body);
+    if (!r.ok && meta.refreshToken) {
+      const fresh = await refreshAccessToken(meta.refreshToken);
+      if (fresh) r = await postToBlogger(fresh, meta.blogId, a.title, body);
+    }
+    return r.ok ? { status: "posted", remoteUrl: r.url } : { status: "failed", error: r.error };
+  },
+};
+
 const ADAPTERS: Record<string, Adapter> = {
   newsroom: newsroom,
   devto: devto,
   hashnode: hashnode,
   medium: oauthPlaceholder("medium"),
-  blogger: oauthPlaceholder("blogger"),
+  blogger: blogger,
   tumblr: oauthPlaceholder("tumblr"),
   linkedin: oauthPlaceholder("linkedin"),
 };
@@ -124,6 +144,7 @@ export async function syndicateArticle(articleId: string) {
     const conn = connections.find((c) => c.targetKey === t.key && c.status === "connected");
     const meta: Record<string, string> = {};
     if (conn?.accessToken) meta.accessToken = conn.accessToken;
+    if (conn?.refreshToken) meta.refreshToken = conn.refreshToken;
     if (conn?.meta) {
       try {
         Object.assign(meta, JSON.parse(conn.meta));

@@ -71,7 +71,18 @@ async function main() {
     create: { code: "FOUNDER50", percentOff: 50, active: true, maxRedemptions: 100 },
   });
 
-  console.log(`Seeded admin=${adminEmail}, ${plans.length} plans, ${targets.length} targets.`);
+  // ---- Sample press opportunities (so the inbox isn't empty) ----
+  const opps = [
+    { title: "Seeking founders on bootstrapping vs raising in 2026", outlet: "TechCrunch (roundup)", category: "Startups", source: "featured", query: "Looking for 2-3 sentence takes from founders who chose bootstrapping over VC and why.", url: "https://featured.com" },
+    { title: "Medicare experts: what should people know before turning 65?", outlet: "Health writer", category: "Insurance", source: "helpab2b", query: "Need a licensed expert quote on the biggest Medicare enrollment mistakes.", url: "https://helpab2bwriter.com" },
+    { title: "AI in regulated industries — practitioner quotes", outlet: "Industry newsletter", category: "AI", source: "qwoted", query: "Seeking founders using AI in healthcare/finance on how they handle compliance.", url: "https://qwoted.com" },
+  ];
+  for (const o of opps) {
+    const exists = await prisma.pressOpportunity.findFirst({ where: { title: o.title } });
+    if (!exists) await prisma.pressOpportunity.create({ data: o });
+  }
+
+  console.log(`Seeded admin=${adminEmail}, ${plans.length} plans, ${targets.length} targets, ${opps.length} press opps.`);
 }
 
 main()

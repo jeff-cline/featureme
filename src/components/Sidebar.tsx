@@ -34,6 +34,7 @@ export default function Sidebar({
         {link("/dashboard", "Dashboard")}
         {link("/profile/edit", "My Profile")}
         {link("/articles", "News Releases")}
+        {link("/press", "Press Inbox")}
         {link("/connections", "Connections")}
         {link("/billing", "Billing")}
         {slug && (

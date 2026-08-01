@@ -191,6 +191,33 @@ model Integration {
   updatedAt    DateTime  @updatedAt
 }
 
+// Journalist / earned-media queries (HARO-successor style) members can answer.
+model PressOpportunity {
+  id        String   @id @default(cuid())
+  source    String   @default("manual") // manual | featured | qwoted | helpab2b | rss
+  title     String
+  outlet    String?
+  category  String?
+  query     String   @default("")
+  url       String?                       // where to respond
+  deadline  DateTime?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  responses PressResponse[]
+}
+
+// Tracks that a member acted on an opportunity (for the dashboard count).
+model PressResponse {
+  id             String   @id @default(cuid())
+  opportunityId  String
+  opportunity    PressOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  userId         String
+  createdAt      DateTime @default(now())
+
+  @@unique([opportunityId, userId])
+}
+
 // Click / citation tracking via /r/{id} redirects and profile views
 model ClickEvent {
   id        String   @id @default(cuid())

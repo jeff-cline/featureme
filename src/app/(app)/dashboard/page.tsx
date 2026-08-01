@@ -53,6 +53,20 @@ export default async function DashboardPage() {
         {stat("Profile views", views)}
       </div>
 
+      {profile && (() => {
+        const days = Math.floor((Date.now() - new Date(profile.updatedAt).getTime()) / 86400000);
+        const stale = days >= 30;
+        return (
+          <div className={`mt-6 rounded-xl border p-4 text-sm ${stale ? "border-amber-200 bg-amber-50 text-amber-800" : "border-neutral-200 bg-white text-neutral-600"}`}>
+            <b>Freshness:</b> your profile was updated {days === 0 ? "today" : `${days} day${days === 1 ? "" : "s"} ago`}.
+            {stale
+              ? " AI engines cite fresher content more often (25.7% fresher on average) — refresh your bio or publish a release to stay current."
+              : " Nice — recently updated content earns more answer-engine citations."}
+            {stale && <> <Link href="/profile/edit" className="font-medium underline">Update profile →</Link></>}
+          </div>
+        );
+      })()}
+
       <div className="mt-8 flex gap-3">
         <Link href="/articles/new" className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800">+ New news release</Link>
         <Link href="/connections" className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium hover:bg-white">Connect platforms</Link>

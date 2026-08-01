@@ -44,9 +44,14 @@ The "connect once, post forever" model. **You** authorize; the app posts after t
 - [ ] **dev.to** — you (or each member) paste a dev.to API key on the Connections page. **Works today.**
 - [ ] **Hashnode** — paste a personal access token + publication ID. **Works today** once you finish
       the publish mutation in `src/lib/syndication.ts` (marked as a real integration point).
-- [ ] **Medium / Blogger / LinkedIn / Tumblr** — register a developer app on each platform to get
-      OAuth client credentials, then flip the target `enabled` and wire the OAuth callback. The
-      adapters and UI are already stubbed for this.
+- [ ] **Blogger** — fully wired. In Google Cloud create an OAuth client, enable the Blogger API, add
+      redirect URI `${APP_URL}/api/connect/blogger/callback`, and paste the client ID/secret into
+      Integrations → Blogger. Members then click **Connect Blogger with Google** on Connections and
+      releases auto-post (with canonical back-link).
+- [ ] **Medium** — its posting API was retired; the Connections page gives each member the one-click
+      `medium.com/p/import` flow (auto-sets canonical). No key needed.
+- [ ] **LinkedIn / Tumblr** — register a developer app for OAuth client credentials, paste into
+      Integrations; adapters are stubbed and light up the same way Blogger does.
 - The **Newsroom (RSS)** target needs nothing — it's always on and is what answer engines crawl first.
 
 ## What's already done (no action needed)

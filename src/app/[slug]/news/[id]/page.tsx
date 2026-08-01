@@ -44,6 +44,7 @@ export default async function NewsPage({
     "@type": "NewsArticle",
     headline: a.title,
     datePublished: a.createdAt.toISOString(),
+    dateModified: a.updatedAt.toISOString(),
     author: { "@type": "Person", name: a.profile.displayName, url: `${env.APP_URL}/${slug}` },
     mainEntityOfPage: a.canonicalUrl || `${env.APP_URL}/${slug}/news/${a.id}`,
   };

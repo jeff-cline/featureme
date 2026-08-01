@@ -10,6 +10,7 @@ export const RESERVED_SLUGS = new Set([
   "articles",
   "article",
   "connections",
+  "press",
   "profile",
   "settings",
   "account",

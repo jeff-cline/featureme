@@ -69,11 +69,35 @@ export default async function ConnectionsPage() {
                 </form>
               )}
 
-              {/* OAuth connectors */}
-              {(t.kind === "oauth") && (
+              {/* Blogger — real Google OAuth */}
+              {t.key === "blogger" && t.enabled && !connected && (
+                <a
+                  href="/api/connect/blogger/start"
+                  className="mt-3 inline-block rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+                >
+                  Connect Blogger with Google
+                </a>
+              )}
+              {t.key === "blogger" && connected && conn?.meta && (
+                <p className="mt-3 text-sm text-green-700">
+                  Posting to: {(() => { try { return JSON.parse(conn.meta!).blogName || "your blog"; } catch { return "your blog"; } })()}
+                </p>
+              )}
+
+              {/* Medium — API retired; guided manual import (auto-sets canonical) */}
+              {t.key === "medium" && (
+                <p className="mt-3 text-sm text-neutral-500">
+                  Medium retired its posting API. To republish: open{" "}
+                  <a href="https://medium.com/p/import" target="_blank" className="text-blue-700 underline">medium.com/p/import</a>{" "}
+                  and paste your newsroom article URL — Medium auto-applies the canonical back to your source.
+                </p>
+              )}
+
+              {/* Other OAuth platforms not yet wired */}
+              {t.kind === "oauth" && !["blogger", "medium"].includes(t.key) && (
                 <p className="mt-3 text-sm text-neutral-500">
                   {t.enabled
-                    ? "OAuth connect flow — the button lights up once the platform app is registered (admin task)."
+                    ? "OAuth connect flow lights up once its app is registered in Integrations."
                     : "Disabled until the platform app is registered."}
                 </p>
               )}
