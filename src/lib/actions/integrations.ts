@@ -4,6 +4,7 @@ import { currentUser } from "@/lib/auth";
 import { saveIntegrationConfig, markIntegrationTest, integrationDef } from "@/lib/integrations";
 import { verifyZapmailApi, refreshMailboxes } from "@/lib/zapmail";
 import { verifyStripe } from "@/lib/stripe";
+import { corePing } from "@/lib/core";
 
 async function requireAdmin() {
   const user = await currentUser();
@@ -27,7 +28,10 @@ export async function testIntegrationAction(formData: FormData) {
   await requireAdmin();
   const key = String(formData.get("__key") || "");
 
-  if (key === "zapmail") {
+  if (key === "core") {
+    const v = await corePing();
+    await markIntegrationTest("core", v.ok, v.error);
+  } else if (key === "zapmail") {
     const v = await verifyZapmailApi();
     await markIntegrationTest("zapmail", v.ok, v.error);
   } else if (key === "stripe") {

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { currentUser, hashPassword } from "@/lib/auth";
 import { slugify, isReserved } from "@/lib/reserved";
 import { sendEmail } from "@/lib/email";
+import { onNewCustomer } from "@/lib/core";
 import { env } from "@/lib/env";
 
 async function requireAdmin() {
@@ -53,6 +54,9 @@ export async function createMemberAction(_prev: unknown, formData: FormData) {
       data: { userId: user.id, planId: plan.id, status: "trialing" },
     });
   }
+
+  // Add to CORE JV CRM + notify Jeff (best-effort).
+  await onNewCustomer({ name, email, planName: plan?.name, source: "admin" });
 
   await sendEmail({
     to: email,

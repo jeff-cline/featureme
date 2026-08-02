@@ -98,7 +98,7 @@ export default async function Home() {
                 ))}
               </ul>
               <Link
-                href="/login"
+                href={`/signup?plan=${p.name.toLowerCase()}`}
                 className={`mt-6 block rounded-md px-4 py-2 text-center text-sm font-medium ${p.highlight ? "bg-neutral-900 text-white hover:bg-neutral-800" : "border border-neutral-300 hover:bg-neutral-50"}`}
               >
                 Get started

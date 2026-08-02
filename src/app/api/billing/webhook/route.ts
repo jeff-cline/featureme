@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getStripe, stripeConfig } from "@/lib/stripe";
+import { onNewCustomer } from "@/lib/core";
 
 // Stripe webhook: activates a subscription on successful checkout.
 export async function POST(req: NextRequest) {
@@ -34,6 +35,9 @@ export async function POST(req: NextRequest) {
       if (s.metadata?.coupon) {
         await prisma.coupon.updateMany({ where: { code: s.metadata.coupon }, data: { timesRedeemed: { increment: 1 } } });
       }
+      // New paying customer → CORE JV CRM + notify Jeff.
+      const u = await prisma.user.findUnique({ where: { id: userId } });
+      if (u) await onNewCustomer({ name: u.name, email: u.email, planName: plan?.name, source: "stripe checkout" });
     }
   }
 

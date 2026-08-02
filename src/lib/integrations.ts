@@ -21,9 +21,21 @@ export type IntegrationDef = {
 
 export const INTEGRATIONS: IntegrationDef[] = [
   {
+    key: "core",
+    label: "CORE Platform (medigap.plus) — email + CRM",
+    blurb: "Send email through CORE's ZapMail and push new customers into CORE's JV CRM. Issue a scoped key (email:send, lead:create) at medigap.plus/core-api. Preferred over the standalone ZapMail below.",
+    fields: [
+      { name: "baseUrl", label: "CORE base URL", placeholder: "https://medigap.plus" },
+      { name: "key", label: "Core key (x-core-key)", placeholder: "core_pk_…" },
+      { name: "secret", label: "Core secret (x-core-secret)", type: "password", placeholder: "core_sk_…" },
+    ],
+    testable: true,
+    externalUrl: "https://medigap.plus/core-api",
+  },
+  {
     key: "zapmail",
-    label: "ZapMail — outbound email",
-    blurb: "API-provisioned mailboxes for sending member invites & notifications. Rotates for deliverability.",
+    label: "ZapMail — outbound email (standalone fallback)",
+    blurb: "Direct ZapMail (used only if CORE above isn't configured). API-provisioned mailboxes, rotates for deliverability.",
     fields: [{ name: "apiKey", label: "ZapMail API key", type: "password", placeholder: "x-auth-zapmail value" }],
     testable: true,
     externalUrl: "https://app.zapmail.ai",

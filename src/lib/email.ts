@@ -2,6 +2,7 @@ import "server-only";
 import nodemailer from "nodemailer";
 import { getIntegrationConfig } from "./integrations";
 import { nextMailbox } from "./zapmail";
+import { coreConfigured, coreEmail } from "./core";
 import { env } from "./env";
 
 export type Mail = { to: string; subject: string; html: string; text?: string };
@@ -39,6 +40,13 @@ async function getTransport(): Promise<{ from: string; transport: nodemailer.Tra
 }
 
 export async function sendEmail(mail: Mail): Promise<{ ok: boolean; info?: string }> {
+  // Prefer CORE (medigap.plus) — its ZapMail sends on our behalf.
+  if (await coreConfigured()) {
+    const r = await coreEmail({ ...mail, provider: "zapmail" });
+    if (r.ok) return { ok: true, info: "core" };
+    // fall through to local transports if CORE errored
+  }
+
   const t = await getTransport();
   if (!t) {
     console.log(`[email:console] to=${mail.to} subject="${mail.subject}" (no provider configured)`);
