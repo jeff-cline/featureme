@@ -2,12 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import ActionForm from "@/components/ActionForm";
 import { loginAction } from "@/lib/actions/auth";
-import { getSession } from "@/lib/auth";
+import { currentUser } from "@/lib/auth";
 
 export const metadata = { title: "Sign in" };
 
 export default async function LoginPage() {
-  if (await getSession()) redirect("/dashboard");
+  // Only redirect if the session maps to a REAL user. A stale cookie whose user
+  // no longer exists must render the form, not bounce to /dashboard (redirect loop).
+  if (await currentUser()) redirect("/dashboard");
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
       <Link href="/" className="mb-8 text-center text-lg font-bold">FeatureMe</Link>

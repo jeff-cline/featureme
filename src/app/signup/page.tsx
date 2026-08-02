@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import ActionForm from "@/components/ActionForm";
 import { signupAction } from "@/lib/actions/signup";
-import { getSession } from "@/lib/auth";
+import { currentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 export const metadata = { title: "Get started" };
@@ -13,7 +13,7 @@ export default async function SignupPage({
 }: {
   searchParams: Promise<{ plan?: string }>;
 }) {
-  if (await getSession()) redirect("/dashboard");
+  if (await currentUser()) redirect("/dashboard");
   const { plan } = await searchParams;
   const plans = await prisma.plan.findMany({ orderBy: { priceCents: "asc" } });
   const field = "w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none";
