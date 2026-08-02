@@ -39,23 +39,29 @@ if ! command -v caddy >/dev/null 2>&1; then
   apt-get install -y caddy
 fi
 
+DB_ABS="/root/featureme/prisma/prod.db"
+
 # --- 5. Unpack the uploaded code (PRESERVING the database + env on redeploys) ---
 echo "▶ Unpacking app…"
-cp -a /root/featureme/prisma/prod.db /root/prod.db.bak 2>/dev/null || true
+# Preserve DB from whichever legacy location actually holds data.
+SRC=""
+[ -s /root/featureme/prisma/prod.db ] && SRC=/root/featureme/prisma/prod.db
+[ -z "$SRC" ] && [ -s /root/featureme/prod.db ] && SRC=/root/featureme/prod.db
+[ -n "$SRC" ] && cp -a "$SRC" /root/prod.db.bak || true
 cp -a /root/featureme/.env /root/.env.bak 2>/dev/null || true
 rm -rf /root/featureme
 mkdir -p /root/featureme/prisma
 tar xzf /root/featureme.tgz -C /root/featureme
 cd /root/featureme
 # restore preserved data so redeploys never wipe accounts/articles
-[ -f /root/prod.db.bak ] && cp -a /root/prod.db.bak /root/featureme/prisma/prod.db || true
+[ -f /root/prod.db.bak ] && cp -a /root/prod.db.bak "$DB_ABS" || true
 [ -f /root/.env.bak ] && cp -a /root/.env.bak /root/featureme/.env || true
 
-# --- 6. Env: create if missing, then ALWAYS enforce the live URL + prod DB ---
+# --- 6. Env: create if missing, then ALWAYS enforce URL + an ABSOLUTE db path ---
 if [ ! -f .env ]; then
   echo "▶ Writing .env…"
   cat > .env <<EOF
-DATABASE_URL="file:./prod.db"
+DATABASE_URL="file:$DB_ABS"
 SESSION_SECRET="$(openssl rand -hex 32)"
 APP_URL="https://featureme.io"
 APP_NAME="FeatureMe"
@@ -64,13 +70,9 @@ ADMIN_PASSWORD="TEMP!234"
 EMAIL_PROVIDER="console"
 EOF
 fi
-# Force the public URL even if a stale/local .env got shipped in.
-if grep -q '^APP_URL=' .env; then
-  sed -i 's#^APP_URL=.*#APP_URL="https://featureme.io"#' .env
-else
-  echo 'APP_URL="https://featureme.io"' >> .env
-fi
-grep -q '^DATABASE_URL=' .env || echo 'DATABASE_URL="file:./prod.db"' >> .env
+# Force the public URL + absolute DB path even if a stale .env got shipped in.
+grep -q '^APP_URL=' .env && sed -i 's#^APP_URL=.*#APP_URL="https://featureme.io"#' .env || echo 'APP_URL="https://featureme.io"' >> .env
+grep -q '^DATABASE_URL=' .env && sed -i "s#^DATABASE_URL=.*#DATABASE_URL=\"file:$DB_ABS\"#" .env || echo "DATABASE_URL=\"file:$DB_ABS\"" >> .env
 
 # --- 7. Install, migrate, seed, build ---
 echo "▶ npm install (this is the slow part on a 1GB box)…"
