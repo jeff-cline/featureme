@@ -42,9 +42,13 @@ export default async function ArticlesPage() {
           <div key={a.id} className="rounded-xl border border-neutral-200 bg-white p-5">
             <div className="flex items-start justify-between">
               <div>
-                <p className="font-semibold">{a.title}</p>
+                <Link href={`/articles/${a.id}`} className="font-semibold hover:underline">{a.title}</Link>
                 <p className="text-xs text-neutral-500">
                   {a.status} · {new Date(a.createdAt).toLocaleDateString()}
+                  {" · "}
+                  <Link href={`/articles/${a.id}`} className="text-blue-700 underline">
+                    {a.syndications.filter((s) => s.status === "posted").length} of {a.syndications.length} live — view proof
+                  </Link>
                   {a.canonicalUrl && <> · cites <a className="text-blue-700 underline" href={a.canonicalUrl} target="_blank">source</a></>}
                 </p>
               </div>

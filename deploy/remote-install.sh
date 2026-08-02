@@ -39,14 +39,19 @@ if ! command -v caddy >/dev/null 2>&1; then
   apt-get install -y caddy
 fi
 
-# --- 5. Unpack the uploaded code ---
+# --- 5. Unpack the uploaded code (PRESERVING the database + env on redeploys) ---
 echo "▶ Unpacking app…"
+cp -a /root/featureme/prisma/prod.db /root/prod.db.bak 2>/dev/null || true
+cp -a /root/featureme/.env /root/.env.bak 2>/dev/null || true
 rm -rf /root/featureme
-mkdir -p /root/featureme
+mkdir -p /root/featureme/prisma
 tar xzf /root/featureme.tgz -C /root/featureme
 cd /root/featureme
+# restore preserved data so redeploys never wipe accounts/articles
+[ -f /root/prod.db.bak ] && cp -a /root/prod.db.bak /root/featureme/prisma/prod.db || true
+[ -f /root/.env.bak ] && cp -a /root/.env.bak /root/featureme/.env || true
 
-# --- 6. Env (only create if missing, so re-runs keep your keys) ---
+# --- 6. Env: create if missing, then ALWAYS enforce the live URL + prod DB ---
 if [ ! -f .env ]; then
   echo "▶ Writing .env…"
   cat > .env <<EOF
@@ -59,6 +64,13 @@ ADMIN_PASSWORD="TEMP!234"
 EMAIL_PROVIDER="console"
 EOF
 fi
+# Force the public URL even if a stale/local .env got shipped in.
+if grep -q '^APP_URL=' .env; then
+  sed -i 's#^APP_URL=.*#APP_URL="https://featureme.io"#' .env
+else
+  echo 'APP_URL="https://featureme.io"' >> .env
+fi
+grep -q '^DATABASE_URL=' .env || echo 'DATABASE_URL="file:./prod.db"' >> .env
 
 # --- 7. Install, migrate, seed, build ---
 echo "▶ npm install (this is the slow part on a 1GB box)…"
@@ -69,9 +81,21 @@ node -e "const{PrismaClient}=require('@prisma/client');const p=new PrismaClient(
 echo "▶ Building…"
 npm run build
 
+# --- 7b. Repair any syndication links saved with a localhost URL ---
+echo "▶ Fixing any localhost links…"
+DATABASE_URL="file:./prod.db" node -e '
+const {PrismaClient}=require("@prisma/client");
+(async()=>{const p=new PrismaClient();
+const rows=await p.syndication.findMany({where:{remoteUrl:{contains:"localhost:3000"}}});
+for(const r of rows){await p.syndication.update({where:{id:r.id},data:{remoteUrl:r.remoteUrl.replace(/https?:\/\/localhost:3000/g,"https://featureme.io")}});}
+if(rows.length)console.log("  fixed "+rows.length+" link(s)");
+await p.$disconnect();})().catch(e=>console.error(e.message));
+' || true
+
 # --- 8. Start with pm2 ---
 echo "▶ Starting app…"
 pm2 startOrReload deploy/ecosystem.config.js
+pm2 restart featureme --update-env >/dev/null 2>&1 || true
 pm2 save
 pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
 
